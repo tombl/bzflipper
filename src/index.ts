@@ -27,6 +27,7 @@ const commands: Record<string, (...args: string[]) => void | Promise<void>> = {
         §a§l--- bzflipper ---
         §b/bzf set <item name> §7-§a Calculates the optimal method of getting the item
         §b/bzf clear §7-§a Hides the GUI
+		§b/bzf findByRawProfit §7-§a Finds the item with the best profit which is undersupplied
         §b/bzf find §7-§a Finds the item with the best profit percentage which is undersupplied
         §b/bzf setkey <key>§7-§a Sets your Hypixel API key
       `
@@ -69,6 +70,39 @@ const commands: Record<string, (...args: string[]) => void | Promise<void>> = {
     targetItem = undefined;
     targetBazaar = undefined;
     targetPlan = undefined;
+  },
+  async findByRawProfit() {
+    if (hypixel === null) {
+      ChatLib.chat(API_KEY_MSG);
+      return;
+    }
+
+    targetItem = undefined;
+    targetBazaar = undefined;
+    targetPlan = undefined;
+    const allBazaar = await getBazaarData(hypixel);
+
+    let bestProfit = -Infinity;
+    for (const [bazaarName, bazaar] of Object.entries(allBazaar)) {
+      if (bazaar.quick_status.sellVolume > bazaar.quick_status.buyVolume) {
+        continue;
+      }
+
+      const itemName = bazaarToReal[bazaarName] ?? bazaarName.split(":")[0];
+      const plan = await getItemPlan(hypixel!, itemName);
+      if (plan === undefined) {
+        continue;
+      }
+
+      const profit = bazaar.quick_status.sellPrice - plan.cost;
+
+      if (profit > bestProfit) {
+        bestProfit = profit;
+        targetItem = items[itemName];
+        targetBazaar = allBazaar[itemName];
+        targetPlan = plan;
+      }
+    }
   },
   async find() {
     if (hypixel === null) {
